@@ -6,6 +6,9 @@ const cookieParser = require("cookie-parser");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
+const mongoose = require("mongoose");
+mongoose.connect("mongodb://127.0.0.1:27017/miniProject");
+
 app.set("view engine", "ejs");
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -21,8 +24,60 @@ app.get("/login", (req, res) => {
 
 //if user is logged in only then we can view the profile
 app.get("/profile", isLoggedIn, async (req, res) => {
-  let user = await userModel.findOne({ email: req.user.email });
+  let user = await userModel
+    .findOne({ email: req.user.email })
+    .populate("posts"); //populating the posts i.e getting the posts of the user
   res.render("profile", { user });
+});
+
+//for liking the post
+app.get("/like/:id", isLoggedIn, async (req, res) => {
+  let post = await postModel.findOne({ _id: req.params.id }).populate("user");
+
+  //if the post is not liked then increase the number of likes
+  if (post.likes.indexOf(req.user.userid) === -1) {
+    post.likes.push(req.user.userid);
+  } else {
+    post.likes.splice(post.likes.indexOf(req.user.userid), 1);
+  }
+
+  await post.save();
+  res.redirect("/profile");
+});
+
+// For editing the post - Fix by passing `user`
+app.get("/edit/:id", isLoggedIn, async (req, res) => {
+  let post = await postModel.findOne({ _id: req.params.id }).populate("user");
+  let user = await userModel.findOne({ email: req.user.email }); // Fetch user details
+  res.render("edit", { post, user }); // Pass user to template
+});
+
+//after editing the post updating the post
+app.post("/update/:id", isLoggedIn, async (req, res) => {
+  let post = await postModel.findOneAndUpdate(
+    { _id: req.params.id },
+    { content: req.body.content }
+  );
+  res.redirect("/profile");
+});
+
+//user posting the post
+app.post("/post", isLoggedIn, async (req, res) => {
+  let user = await userModel.findOne({ email: req.user.email });
+  let { content } = req.body;
+
+  //posting the post with its id and the content
+  let post = await postModel.create({
+    user: user._id,
+    content,
+  });
+
+  //need to push the post id
+  user.posts.push(post._id);
+  await user.save();
+
+  //after posting the post redirecting to the profile page
+  res.redirect("/profile");
 });
 
 app.post("/register", async (req, res) => {
@@ -57,7 +112,12 @@ app.post("/login", async (req, res) => {
 
   let user = await userModel.findOne({ email });
   if (!user) {
-    return res.status(500).send("Something went wrong");
+    return res.send(`
+    <script>
+      alert('User not found');
+      window.location.href = '/login';
+    </script>
+    `);
   }
 
   bcrypt.compare(password, user.password, (err, result) => {
