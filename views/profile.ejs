@@ -47,22 +47,51 @@
         </h3>
       </div>
 
-      <!-- Post containers aligned horizontally -->
-      <div class="w-full flex justify-start gap-4 mt-4 ml-10">
-        <!-- First Post -->
-        <% user.posts.forEach((post) => { %>
-        <div class="posts p-4 border-2 rounded-md border-zinc-900 w-1/5">
+      <!-- Post containers aligned in a 4-column grid -->
+      <div
+        class="w-full grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4 px-10"
+      >
+        <% user.posts.forEach((post)=> { %>
+        <div class="posts p-4 border-2 rounded-md border-zinc-900 bg-slate-200">
           <h4 class="text-blue-500 mb-3">@<%= user.username %></h4>
           <p class="text-sm tracking-wide"><%= post.content %></p>
 
           <div class="btns flex gap-3 mt-5">
             <p class="text-zinc-500"><%= post.likes.length %> 👍🏼</p>
             <a class="text-blue-500" href="/like/<%= post._id %>">
-              <%= post.likes.indexOf(user._id) === -1 ? "Like" : "UnLike" %></a
-            >
+              <%= post.likes.indexOf(user._id)===-1 ? "Like" : "UnLike" %>
+            </a>
             <a class="text-zinc-500" href="/edit/<%= post._id %>">Edit</a>
+            <button
+              class="text-red-500"
+              onclick="confirmDelete('<%= post._id %>')"
+            >
+              Delete🗑️
+            </button>
           </div>
         </div>
+
+        <script>
+          function confirmDelete(postId) {
+            const confirmation = confirm(
+              "Are you sure you want to delete this post?"
+            );
+            if (confirmation) {
+              fetch(`/delete/${postId}`, { method: "DELETE" })
+                .then((response) => response.json())
+                .then((data) => {
+                  if (data.success) {
+                    alert("Post deleted successfully!");
+                    location.reload(); // Refresh the page to remove the deleted post
+                  } else {
+                    alert("Error deleting post.");
+                  }
+                })
+                .catch((error) => console.error("Error:", error));
+            }
+          }
+        </script>
+
         <% }) %>
       </div>
     </div>

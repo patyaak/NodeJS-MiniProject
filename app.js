@@ -80,6 +80,18 @@ app.post("/post", isLoggedIn, async (req, res) => {
   res.redirect("/profile");
 });
 
+//deleting the post
+app.delete("/delete/:id", async (req, res) => {
+  try {
+    const postId = req.params.id;
+    await postModel.findByIdAndDelete(postId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    res.status(500).json({ success: false });
+  }
+});
+
 app.post("/register", async (req, res) => {
   let { email, password, username, name, age } = req.body;
 
